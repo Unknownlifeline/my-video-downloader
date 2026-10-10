@@ -25,21 +25,28 @@ def run_flask():
 
 # 3. 2-Minute Anti-Sleep Loop
 def keep_alive():
-    time.sleep(20) # Server start hone ka initial wait
+    time.sleep(20)
     while True:
         try:
-            # 1. Pehle local port ko ping karega
             requests.get(f"http://127.0.0.1:{PORT}/")
-            
-            # 2. Agar Render external URL available hai toh use bhi hit karega
             render_url = os.environ.get("RENDER_EXTERNAL_URL")
             if render_url:
                 requests.get(render_url)
             print("⚡ 2-Min Ping Sent! Render is Wide Awake.")
         except Exception as e:
             print(f"Ping notice: {e}")
-            
-        time.sleep(120) # Har 2 minute (120 seconds) par ping
+        time.sleep(120)
+
+# Common yt-dlp Bypass Options
+COMMON_OPTS = {
+    'quiet': True,
+    'noplaylist': True,
+    'impersonate': 'chrome',
+    'extractor_args': {
+        'youtube': {'player_client': ['android', 'ios']},
+        'generic': {'impersonate': ['chrome']}
+    }
+}
 
 # 4. Bot Handlers
 @bot.message_handler(commands=['start'])
@@ -52,7 +59,7 @@ def fetch_qualities(message):
     chat_id = message.chat.id
     msg = bot.reply_to(message, "🔍 Scanning video qualities...")
 
-    ydl_opts = {'quiet': True, 'noplaylist': True}
+    ydl_opts = dict(COMMON_OPTS)
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -104,12 +111,12 @@ def handle_download(call):
         ext = 'mp4'
         
     out_file = f"{chat_id}_video.{ext}"
-    ydl_opts = {
+    ydl_opts = dict(COMMON_OPTS)
+    ydl_opts.update({
         'format': format_str,
         'outtmpl': out_file,
         'merge_output_format': 'mp4',
-        'quiet': True,
-    }
+    })
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
