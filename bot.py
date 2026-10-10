@@ -37,7 +37,6 @@ def keep_alive():
             print(f"Ping notice: {e}")
         time.sleep(120)
 
-# Stable Options (YouTube Android Client Spoofing)
 YDL_BASE_OPTS = {
     'quiet': True,
     'no_warnings': True,
@@ -128,6 +127,28 @@ def handle_download(call):
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
             
+        file_size_mb = os.path.getsize(out_file) / (1024 * 1024)
+
+        # Telegram 50 MB limit bypass logic
+        if file_size_mb > 49.5:
+            with yt_dlp.YoutubeDL(dict(YDL_BASE_OPTS)) as ydl:
+                info = ydl.extract_info(url, download=False)
+                direct_url = info.get('url') or url
+
+            if os.path.exists(out_file):
+                os.remove(out_file)
+
+            bot.edit_message_text(
+                f"⚠️ *File size ({file_size_mb:.1f} MB) 50 MB se bada hai!*\n\n"
+                f"Telegram bot 50 MB se badi file upload allow nahi karta.\n"
+                f"Aap niche diye direct link se poori file download kar sakte hain:\n\n"
+                f"🔗 [Direct Video Download Link]({direct_url})",
+                chat_id=chat_id,
+                message_id=msg_id,
+                parse_mode="Markdown"
+            )
+            return
+
         bot.edit_message_text("⬆️ Uploading to Telegram...", chat_id=chat_id, message_id=msg_id)
         
         with open(out_file, 'rb') as f:
@@ -141,6 +162,8 @@ def handle_download(call):
         bot.delete_message(chat_id, msg_id)
         
     except Exception as e:
+        if os.path.exists(out_file):
+            os.remove(out_file)
         err_msg = str(e) if str(e) else repr(e)
         bot.edit_message_text(f"❌ Download fail: {err_msg}", chat_id=chat_id, message_id=msg_id)
 
