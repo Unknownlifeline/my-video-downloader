@@ -2,14 +2,49 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 import yt_dlp
 import os
+import threading
+import time
+import requests
+from flask import Flask
 
-TOKEN = '8681462655:AAE_NBd1uQcAdgXflA4WQlSNq0cZV2pYXz0'
+# 1. Bot Token
+TOKEN = 'APNA_BOT_TOKEN_YAHA_DAALEIN'
 bot = telebot.TeleBot(TOKEN)
 user_links = {}
 
+# 2. Render Web Server
+app = Flask(__name__)
+PORT = int(os.environ.get("PORT", 8080))
+
+@app.route('/')
+def home():
+    return "Bot is 100% active and awake!"
+
+def run_flask():
+    app.run(host='0.0.0.0', port=PORT)
+
+# 3. 2-Minute Anti-Sleep Loop
+def keep_alive():
+    time.sleep(20) # Server start hone ka initial wait
+    while True:
+        try:
+            # 1. Pehle local port ko ping karega
+            requests.get(f"http://127.0.0.1:{PORT}/")
+            
+            # 2. Agar Render external URL available hai toh use bhi hit karega
+            render_url = os.environ.get("RENDER_EXTERNAL_URL")
+            if render_url:
+                requests.get(render_url)
+            print("⚡ 2-Min Ping Sent! Render is Wide Awake.")
+        except Exception as e:
+            print(f"Ping notice: {e}")
+            
+        time.sleep(120) # Har 2 minute (120 seconds) par ping
+
+# 4. Bot Handlers
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    bot.reply_to(message, "🔥 Downloader Bot Active!\nMujhe koi bhi video link bhejo, main available qualities fetch karunga.")
+    bot.reply_to(message, "🔥 Downloader Bot Active 24/7!\nMujhe koi bhi video link bhejo, main available qualities fetch karunga.")
 
 @bot.message_handler(func=lambda message: message.text.startswith('http'))
 def fetch_qualities(message):
@@ -95,5 +130,8 @@ def handle_download(call):
     except Exception as e:
         bot.edit_message_text(f"❌ Download fail: {e}", chat_id=chat_id, message_id=msg_id)
 
-print("Bot is LIVE!")
-bot.infinity_polling()
+if __name__ == '__main__':
+    threading.Thread(target=run_flask).start()
+    threading.Thread(target=keep_alive).start()
+    print("Anti-Sleep 2-Min Bot is LIVE!")
+    bot.infinity_polling()
