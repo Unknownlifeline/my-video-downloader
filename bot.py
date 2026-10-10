@@ -8,7 +8,7 @@ import requests
 from flask import Flask
 
 # 1. Bot Token
-TOKEN = 'APNA_BOT_TOKEN_YAHA_DAALEIN'
+TOKEN = '8681462655:AAE_NBd1uQcAdgXflA4WQlSNq0cZV2pYXz0'
 bot = telebot.TeleBot(TOKEN)
 user_links = {}
 
