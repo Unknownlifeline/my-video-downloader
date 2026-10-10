@@ -8,7 +8,7 @@ import requests
 from flask import Flask
 
 # 1. Bot Token
-TOKEN = '8681462655:AAE_NBd1uQcAdgXflA4WQlSNq0cZV2pYXz0'
+TOKEN = 'APNA_BOT_TOKEN_YAHA_DAALEIN'
 bot = telebot.TeleBot(TOKEN)
 user_links = {}
 
@@ -37,14 +37,19 @@ def keep_alive():
             print(f"Ping notice: {e}")
         time.sleep(120)
 
-# Common yt-dlp Bypass Options
-COMMON_OPTS = {
+# Stable Options (YouTube Android Client Spoofing)
+YDL_BASE_OPTS = {
     'quiet': True,
+    'no_warnings': True,
     'noplaylist': True,
-    'impersonate': 'chrome',
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+    },
     'extractor_args': {
-        'youtube': {'player_client': ['android', 'ios']},
-        'generic': {'impersonate': ['chrome']}
+        'youtube': {
+            'player_client': ['android', 'web']
+        }
     }
 }
 
@@ -55,13 +60,13 @@ def send_welcome(message):
 
 @bot.message_handler(func=lambda message: message.text.startswith('http'))
 def fetch_qualities(message):
-    url = message.text
+    url = message.text.strip()
     chat_id = message.chat.id
     msg = bot.reply_to(message, "🔍 Scanning video qualities...")
 
-    ydl_opts = dict(COMMON_OPTS)
+    opts = dict(YDL_BASE_OPTS)
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
         formats = info.get('formats', [])
@@ -80,14 +85,15 @@ def fetch_qualities(message):
 
         title = info.get('title', 'Video')
         bot.edit_message_text(
-            text=f"✅ **{title}**\n\nQuality select karein:",
+            text=f"✅ *{title}*\n\nQuality select karein:",
             chat_id=chat_id,
             message_id=msg.message_id,
             reply_markup=keyboard,
             parse_mode="Markdown"
         )
     except Exception as e:
-        bot.edit_message_text(f"❌ Error: {e}", chat_id=chat_id, message_id=msg.message_id)
+        err_msg = str(e) if str(e) else repr(e)
+        bot.edit_message_text(f"❌ Error: {err_msg}", chat_id=chat_id, message_id=msg.message_id)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('dl_'))
 def handle_download(call):
@@ -111,15 +117,15 @@ def handle_download(call):
         ext = 'mp4'
         
     out_file = f"{chat_id}_video.{ext}"
-    ydl_opts = dict(COMMON_OPTS)
-    ydl_opts.update({
+    opts = dict(YDL_BASE_OPTS)
+    opts.update({
         'format': format_str,
         'outtmpl': out_file,
         'merge_output_format': 'mp4',
     })
     
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])
             
         bot.edit_message_text("⬆️ Uploading to Telegram...", chat_id=chat_id, message_id=msg_id)
@@ -135,7 +141,8 @@ def handle_download(call):
         bot.delete_message(chat_id, msg_id)
         
     except Exception as e:
-        bot.edit_message_text(f"❌ Download fail: {e}", chat_id=chat_id, message_id=msg_id)
+        err_msg = str(e) if str(e) else repr(e)
+        bot.edit_message_text(f"❌ Download fail: {err_msg}", chat_id=chat_id, message_id=msg_id)
 
 if __name__ == '__main__':
     threading.Thread(target=run_flask).start()
